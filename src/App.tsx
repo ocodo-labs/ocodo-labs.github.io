@@ -4,21 +4,42 @@ import { AnimatedArc } from '@/components/AnimatedArc';
 import { GradientBackground } from '@/components/GradientBackground';
 import { OcodoFoundryPanel } from '@/components/OcodoFoundryPanel';
 
+const BPM = 60;
+
 const randomBetween = (min: number, max: number) =>
   min + Math.random() * (max - min);
 
+const bpmIntervals = (bpm: number) => {
+  const beat = 60_000 / bpm;
+
+  return [
+    beat * 0.25, // 1/16
+    beat * 0.5,  // 1/8
+    beat,        // 1/4
+    beat * 2,    // 1/2
+    beat * 4,    // 1 bar
+  ];
+};
+
+const randomBpmInterval = (bpm: number) => {
+  const intervals = bpmIntervals(bpm);
+  return intervals[Math.floor(Math.random() * intervals.length)];
+};
+
 const ring = () => {
-  const minArcDegrees = randomBetween(60, 240);
+  const minArcDegrees = randomBetween(10, 120);
   const maxArcDegrees = randomBetween(minArcDegrees, 360);
 
   return {
-    radius: randomBetween(40, 170),
+    radius: randomBetween(50, 200),
     width: randomBetween(1, 30),
     alpha: randomBetween(1, 50),
     minArcDegrees,
     maxArcDegrees,
     initialArcDegrees: randomBetween(minArcDegrees, maxArcDegrees),
     rotationStart: randomBetween(0, 360),
+    randomIntervalStart: randomBpmInterval(BPM),
+    randomIntervalEnd: randomBpmInterval(BPM),
   };
 };
 
@@ -54,19 +75,19 @@ export default function App() {
             spinDirection="both"
             durationRangeStart={10}
             durationRangeEnd={3000}
-            randomIntervalStart={0}
-            randomIntervalEnd={1000}
+            randomIntervalStart={e.randomIntervalStart}
+            randomIntervalEnd={e.randomIntervalEnd}
           />
         </div>
       )}
 
-      <div className="absolute bottom-0 flex justify-center inset-x-0">
+      <div className="absolute bottom-0 inset-x-0 flex justify-center">
         <OcodoFoundryPanel />
       </div>
 
       <button
         onClick={resetRings}
-        className="cursor-pointer absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 backdrop-blur-sm transition hover:bg-white/10 hover:text-white"
+        className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 backdrop-blur-sm transition hover:bg-white/10 hover:text-white"
         aria-label="Reset rings"
       >
         <RefreshCw size={18} />
