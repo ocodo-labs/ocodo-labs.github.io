@@ -43,7 +43,7 @@ const ring = () => {
   };
 };
 
-const createRings = () => Array.from({ length: 8 }, () => ring());
+const createRings = () => Array.from({ length: 10 }, () => ring());
 
 export default function App() {
   const [rings, setRings] = useState(createRings);
