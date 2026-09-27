@@ -52,6 +52,7 @@ export default function App() {
   const [rings, setRings] = useState(createRings);
   const [showRefreshButton, setShowRefreshButton] = useState(true);
   const [showPanel, setShowPanel] = useState(true);
+  const [showHelpPanel, setShowHelpPanel] = useState(false);
 
   const resetRings = () => {
     setRings(createRings());
@@ -69,6 +70,13 @@ export default function App() {
 
       if (event.key === 'f') {
         setShowPanel((visible) => !visible);
+      }
+
+      if (
+        event.ctrlKey &&
+        (event.key === '/' || event.key === '?')
+      ) {
+        setShowHelpPanel(prev => !prev);
       }
     };
 
@@ -120,13 +128,42 @@ export default function App() {
 
       <button
         onClick={resetRings}
-        className={`absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 backdrop-blur-sm transition-opacity hover:bg-white/10 hover:text-white ${
-          showRefreshButton ? 'opacity-100' : 'pointer-events-none opacity-0'
-        }`}
+        className={`absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 backdrop-blur-sm transition-opacity hover:bg-white/10 hover:text-white ${showRefreshButton ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
         aria-label="Reset rings"
       >
         <RefreshCw size={18} />
       </button>
+
+      {showHelpPanel &&
+        <>
+          <div className='absolute top-0 inset-x-0 flex justify-center'>
+            <div
+              className='rounded-lg border p-5 text-white w-1/3 bg-white/10'
+              style={{ borderColor: 'hsl(255 30% 60% / 20%)' }}
+            >
+              <div className='mb-2 text-2xl font-bold'>
+                Help Panel
+              </div>
+              <div className="grid grid-cols-[4rem_1fr] gap-2 items-center">
+                <div className="font-mono bg-white/10 p-2 w-8 rounded-xl flex justify-center">f</div>
+                <div>Toggle logo fade in / out</div>
+
+                <div className="font-mono bg-white/10 p-2 w-8 rounded-xl flex justify-center">r</div>
+                <div>Reset arcs</div>
+
+                <div className="font-mono bg-white/10 p-2 w-8 rounded-xl flex justify-center">v</div>
+                <div>Toggle refresh button visibility</div>
+
+                <div className="font-mono bg-white/10 p-2 w-15 rounded-xl flex justify-center items-center text-[12px] flex-col">
+                  <div>Ctrl+?</div>
+                </div>
+                <div>Toggle help panel</div>
+              </div>
+            </div>
+          </div>
+        </>
+      }
     </main>
   );
 }
