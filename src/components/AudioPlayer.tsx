@@ -112,7 +112,7 @@ export function AudioPlayer() {
           [&::-webkit-slider-runnable-track]:h-1.5
           [&::-webkit-slider-runnable-track]:rounded-full
           [&::-webkit-slider-runnable-track]:bg-foreground/15
-          [&::-webkit-slider-thumb]:mt-[-3px]
+          [&::-webkit-slider-thumb]:-mt-0.75
           [&::-webkit-slider-thumb]:h-2.5
           [&::-webkit-slider-thumb]:w-2.5
           [&::-webkit-slider-thumb]:appearance-none
