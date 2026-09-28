@@ -1,10 +1,25 @@
-import { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Moon, RefreshCw, Sun } from 'lucide-react';
 import { AnimatedArc } from '@/components/AnimatedArc';
 import { GradientBackground } from '@/components/GradientBackground';
 import { OcodoFoundryPanel } from '@/components/OcodoFoundryPanel';
+import { AudioPlayer } from '@/components/AudioPlayer';
 
-const BPM = 60;
+const BPM = 173;
+
+export type Ring = {
+  radius: number;
+  width: number;
+  alpha: number;
+  minArcDegrees: number;
+  maxArcDegrees: number;
+  initialArcDegrees: number;
+  rotationStart: number;
+  randomIntervalStart: number;
+  randomIntervalEnd: number;
+};
+
+export const purpleColor = (e: Ring) => `hsl(255 30% 60% / ${e.alpha}%)`;
 
 const randomBetween = (min: number, max: number) =>
   min + Math.random() * (max - min);
@@ -43,25 +58,80 @@ const ring = () => {
   };
 };
 
-const createRings = () =>
+const createUpTo10Rings = () =>
   Array.from({ length: randomBetween(1, 10) }, () => ring());
+
+const createRings = (c: number) =>
+  Array.from({ length: c }, () => ring())
 
 const BAR_LENGTH = (60_000 / BPM) * 4;
 
+type Theme = 'dark' | 'light' | 'system';
+type ResolvedTheme = 'dark' | 'light';
+type ArcButt = 'butt' | 'round'
+
 export default function App() {
-  const [rings, setRings] = useState(createRings);
-  const [showRefreshButton, setShowRefreshButton] = useState(true);
+  const [rings, setRings] = useState<Ring[]>(createUpTo10Rings);
+  const [showButtons, setShowButtons] = useState(true);
   const [showPanel, setShowPanel] = useState(true);
   const [showHelpPanel, setShowHelpPanel] = useState(false);
+  const [showGlobs, setShowGlobs] = useState(false);
+  const [theme, setTheme] = useState<Theme>('system');
+  const [systemTheme, setSystemTheme] = useState<ResolvedTheme>('light');
+  const [arcLinecap, setArcLinecap] = useState<ArcButt>('butt');
 
-  const resetRings = () => {
-    setRings(createRings());
-  };
+  const toggleButts = useCallback(() => {
+    setArcLinecap(prev => prev === 'butt' ? 'round' : 'butt');
+  }, []);
+
+  const resetRings = useCallback(() => {
+    setRings(createUpTo10Rings());
+  }, []);
+
+  const numberOfRings = useCallback((count: number) => {
+    setRings(createRings(count));
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia(
+      '(prefers-color-scheme: dark)'
+    );
+
+    const updateSystemTheme = () => {
+      setSystemTheme(media.matches ? 'dark' : 'light');
+    };
+
+    updateSystemTheme();
+
+    media.addEventListener('change', updateSystemTheme);
+
+    return () => {
+      media.removeEventListener('change', updateSystemTheme);
+    };
+  }, []);
+
+  const resolvedTheme: ResolvedTheme =
+    theme === 'system' ? systemTheme : theme;
+
+  useEffect(() => {
+    document.documentElement.classList.toggle(
+      'dark',
+      resolvedTheme === 'dark'
+    );
+  }, [resolvedTheme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const current = prev === 'system' ? systemTheme : prev;
+
+      return current === 'dark' ? 'light' : 'dark';
+    });
+  }, [systemTheme]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'v') {
-        setShowRefreshButton((visible) => !visible);
+        setShowButtons((visible) => !visible);
       }
 
       if (event.key === 'r') {
@@ -72,11 +142,27 @@ export default function App() {
         setShowPanel((visible) => !visible);
       }
 
+      if (event.key === 'g') {
+        setShowGlobs((visible) => !visible);
+      }
+
+      if (event.key === 't') {
+        toggleTheme();
+      }
+
+      if ([1, 2, 3, 4, 5, 6, 7, 8, 9].map(e => e.toString()).includes(event.key)) {
+        numberOfRings(Number(event.key));
+      }
+
+      if (event.key === 'b') {
+        toggleButts();
+      }
+
       if (
         event.ctrlKey &&
         (event.key === '/' || event.key === '?')
       ) {
-        setShowHelpPanel(prev => !prev);
+        setShowHelpPanel((visible) => !visible);
       }
     };
 
@@ -85,13 +171,13 @@ export default function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [resetRings, toggleTheme, toggleButts]);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
-      <GradientBackground />
+      {showGlobs && <GradientBackground />}
 
-      {rings.map((e, i) =>
+      {rings.map((e: Ring, i) => (
         <div
           key={i}
           className="absolute inset-0 flex items-center justify-center"
@@ -99,8 +185,8 @@ export default function App() {
           <AnimatedArc
             radius={e.radius}
             strokeWidth={e.width}
-            strokeColor={`hsl(255 30% 60% / ${e.alpha}%)`}
-            strokeLinecap="butt"
+            strokeColor={purpleColor(e) ?? 'white'}
+            strokeLinecap={arcLinecap}
             minArcDegrees={e.minArcDegrees}
             maxArcDegrees={e.maxArcDegrees}
             initialArcDegrees={e.initialArcDegrees}
@@ -114,10 +200,10 @@ export default function App() {
             randomIntervalEnd={e.randomIntervalEnd}
           />
         </div>
-      )}
+      ))}
 
       <div
-        className="absolute bottom-0 inset-x-0 flex justify-center"
+        className="absolute bottom-15 inset-x-0 flex justify-center gap-2"
         style={{
           opacity: showPanel ? 1 : 0,
           transition: `opacity ${BAR_LENGTH}ms ease-in-out`,
@@ -125,45 +211,101 @@ export default function App() {
       >
         <OcodoFoundryPanel />
       </div>
+      <div
+        className="absolute bottom-5 inset-x-0 flex justify-center gap-2">
+        <AudioPlayer />
+      </div>
 
-      <button
-        onClick={resetRings}
-        className={`absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 backdrop-blur-sm transition-opacity hover:bg-white/10 hover:text-white ${showRefreshButton ? 'opacity-100' : 'pointer-events-none opacity-0'
-          }`}
-        aria-label="Reset rings"
-      >
-        <RefreshCw size={18} />
-      </button>
-
-      {showHelpPanel &&
+      {showButtons && (
         <>
-          <div className='absolute top-0 inset-x-0 flex justify-center'>
-            <div
-              className='rounded-lg border p-5 text-white w-1/3 bg-white/10'
-              style={{ borderColor: 'hsl(255 30% 60% / 20%)' }}
-            >
-              <div className='mb-2 text-2xl font-bold'>
-                Help Panel
-              </div>
-              <div className="grid grid-cols-[4rem_1fr] gap-2 items-center">
-                <div className="font-mono bg-white/10 p-2 w-8 rounded-xl flex justify-center">f</div>
-                <div>Toggle logo fade in / out</div>
+          <button
+            onClick={toggleTheme}
+            className="absolute left-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 backdrop-blur-sm transition-opacity hover:bg-white/10 hover:text-white"
+            aria-label={`Theme: ${theme}`}
+            title={`Theme: ${theme}`}
+          >
+            {resolvedTheme === 'dark' ? (
+              <Moon size={18} />
+            ) : (
+              <Sun size={18} />
+            )}
+          </button>
 
-                <div className="font-mono bg-white/10 p-2 w-8 rounded-xl flex justify-center">r</div>
-                <div>Reset arcs</div>
-
-                <div className="font-mono bg-white/10 p-2 w-8 rounded-xl flex justify-center">v</div>
-                <div>Toggle refresh button visibility</div>
-
-                <div className="font-mono bg-white/10 p-2 w-15 rounded-xl flex justify-center items-center text-[12px] flex-col">
-                  <div>Ctrl+?</div>
-                </div>
-                <div>Toggle help panel</div>
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={resetRings}
+            className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 backdrop-blur-sm transition-opacity hover:bg-white/10 hover:text-white"
+            aria-label="Reset rings"
+            title="Reset rings"
+          >
+            <RefreshCw size={18} />
+          </button>
         </>
-      }
+      )}
+
+      {showHelpPanel && (
+        <HelpPanel />
+      )}
     </main>
   );
 }
+
+
+const HelpPanel = () => (
+  <div className="absolute top-0 inset-x-0 flex justify-center">
+    <div
+      className="w-1/2 rounded-lg border bg-white/10 p-5 text-white"
+      style={{
+        borderColor: 'hsl(255 30% 60% / 20%)',
+      }}
+    >
+      <div className="mb-2 text-md text-foreground font-bold">
+        Help Panel
+      </div>
+      <div className='text-sm'>
+
+
+        <div className="grid grid-cols-[4rem_1fr] items-center gap-2">
+          <div className="text-foreground flex w-8 justify-center rounded-xl bg-foreground/10 p-2 font-mono">
+            f
+          </div>
+          <div className="text-foreground">Toggle logo fade in / out</div>
+
+          <div className="text-foreground flex w-8 justify-center rounded-xl bg-foreground/10 p-2 font-mono">
+            r
+          </div>
+          <div className="text-foreground">Reset with Random number of arcs</div>
+
+          <div className="text-foreground flex w-8 justify-center rounded-xl bg-foreground/10 p-2 font-mono">
+            1..9
+          </div>
+          <div className="text-foreground">Reset with number of arcs</div>
+
+          <div className="text-foreground flex w-8 justify-center rounded-xl bg-foreground/10 p-2 font-mono">
+            v
+          </div>
+          <div className="text-foreground">Toggle button visibility</div>
+
+          <div className="text-foreground flex w-8 justify-center rounded-xl bg-foreground/10 p-2 font-mono">
+            g
+          </div>
+          <div className="text-foreground">Toggle gradient background</div>
+
+          <div className="text-foreground flex w-8 justify-center rounded-xl bg-foreground/10 p-2 font-mono">
+            b
+          </div>
+          <div className="text-foreground">Toggle linecaps butt or round</div>
+
+          <div className="text-foreground flex w-8 justify-center rounded-xl bg-foreground/10 p-2 font-mono">
+            t
+          </div>
+          <div className="text-foreground">Toggle theme Dark/Light</div>
+
+          <div className="text-foreground flex w-8 flex-col items-center justify-center rounded-xl bg-foreground/10 p-2 font-mono text-[12px]">
+            <div className="text-foreground">Ctrl+?</div>
+          </div>
+          <div className="text-foreground">Toggle help panel</div>
+        </div>
+      </div>
+    </div>
+  </div>
+)
